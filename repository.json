@@ -1,0 +1,14 @@
+{
+	"author": "SORS",
+	"gitHubUrl": "https://github.com/sorsme/sinope-switch",
+	"packages": [
+		{
+			"name": "Zigbee Driver for Sinope Switch",
+			"category": "Integrations",
+			"location": "https://raw.githubusercontent.com/sorsme/sinope-switch/main/src/packageManifest.json",
+			"description": "Sinope Switch driver with support of energy meter, single, double and long taps",
+			"tags": ["Energy Monitoring", "Switch", "Zigbee"]
+		}
+	]
+	
+}
