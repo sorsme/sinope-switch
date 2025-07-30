@@ -18,7 +18,6 @@ metadata {
         capability 'DoubleTapableButton'
         capability 'HoldableButton'
         capability 'PushableButton'
-        capability 'ReleasableButton'
         capability 'TemperatureMeasurement'
 
         // FF01 attributes
