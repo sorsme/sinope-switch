@@ -10,13 +10,9 @@ metadata {
         capability 'Configuration'
         capability 'Refresh'
         capability 'Switch'
-        capability 'SwitchLevel'
         capability 'VoltageMeasurement'
         capability 'PowerMeter'
         capability 'EnergyMeter'
-        capability 'PushableButton'
-        capability 'DoubleTapableButton'
-        capability 'HoldableButton'
 
         // FF01 attributes
         attribute 'keypadLock',      'string'
@@ -26,9 +22,7 @@ metadata {
         attribute 'offLedColor',     'string'
         attribute 'onLedIntensity',  'number'
         attribute 'offLedIntensity', 'number'
-        attribute 'minIntensity',    'number'
         attribute 'phaseControl',    'string'
-        attribute 'doubleUpFull',    'string'
         attribute 'timer',           'number'
         attribute 'timerCountDown',  'number'
         attribute 'connectedLoad',   'number'
@@ -36,27 +30,16 @@ metadata {
 
         // standard
         attribute 'numberOfButtons', 'number'
-        attribute 'onLevel',         'number'
-        attribute 'currentLevel',    'number'
 
         command 'lockKeypad'
         command 'unlockKeypad'
-        command 'setKeypadLock', [[name: 'State', type: 'ENUM', constraints: ['Locked','Unlocked']]]
-
-        command 'setOnLedColor',      [[name: 'Hex', type: 'STRING']]
-        command 'setOffLedColor',     [[name: 'Hex', type: 'STRING']]
-        command 'setOnLedIntensity',  [[name: 'Pct', type: 'NUMBER']]
-        command 'setOffLedIntensity', [[name: 'Pct', type: 'NUMBER']]
-        command 'setMinIntensity',    [[name: 'Level(0–3000)', type: 'NUMBER']]
-        command 'setPhaseControl',    [[name: 'Mode', type: 'ENUM', constraints: ['forward','reverse']]]
-        command 'setDoubleUpFull',    [[name: 'State', type: 'ENUM', constraints: ['On','Off']]]
-
-        command 'setTimer',    [[name: 'Seconds(1–10800)', type: 'NUMBER']]
+        command 'setOnLedColor',      [[name: '0xRGB ', type: 'STRING']]
+        command 'setOffLedColor',     [[name: '0xRGB ', type: 'STRING']]
+        command 'setOnLedIntensity',  [[name: '1-100% ', type: 'NUMBER']]
+        command 'setOffLedIntensity', [[name: '1-100% ', type: 'NUMBER']]
+        command 'setTimer',    [[name: '1–10800sec, 0 to Disable ', type: 'NUMBER']]
         command 'refreshTimer'
-        command 'setConnectedLoad', [[name:'Watts', type:'NUMBER']]
-
-        command 'setOnLevel', [[name:'Pct (0–100)', type:'NUMBER']]
-        command 'refreshLevel'
+        command 'setConnectedLoad', [[name:'Watts ', type:'NUMBER']]
     }
 
     preferences {
@@ -85,7 +68,7 @@ def configure() {
     cmds += zigbee.configureReporting(0x0B04, 0x0505, DataType.UINT16, 30, 600, 10)
     cmds += zigbee.configureReporting(0x0B04, 0x050B, DataType.UINT24, 30, 600, (powerReportInterval ?: 50) as Integer)
     cmds += zigbee.configureReporting(0x0702, 0x0000, DataType.UINT48, 60, 3600, (energyReportInterval ?: 10) as Integer)
-    cmds += zigbee.configureReporting(0xFF01, 0x0054, DataType.UINT8, 0, 0, 1, [mfgCode: 0x119C])
+    cmds += zigbee.configureReporting(0xFF01, 0x0054, DataType.ENUM8, 0, 0, 0)
     sendZigbeeCommands(cmds)
 }
 
@@ -96,14 +79,14 @@ def refresh() {
     cmds += zigbee.readAttribute(0x0B04,   0x0505)
     cmds += zigbee.readAttribute(0x0B04,   0x050B)
     cmds += zigbee.readAttribute(0x0702,   0x0000)
-    cmds += zigbee.readAttribute(0xFF01,   0x0002, [mfgCode: 0x119C])
-    cmds += zigbee.readAttribute(0xFF01,   0x0050, [mfgCode: 0x119C])
-    cmds += zigbee.readAttribute(0xFF01,   0x0051, [mfgCode: 0x119C])
-    cmds += zigbee.readAttribute(0xFF01,   0x0052, [mfgCode: 0x119C])
-    cmds += zigbee.readAttribute(0xFF01,   0x0053, [mfgCode: 0x119C])
-    cmds += zigbee.readAttribute(0xFF01,   0x0055, [mfgCode: 0x119C])
-    cmds += zigbee.readAttribute(0xFF01,   0x0056, [mfgCode: 0x119C])
-    cmds += zigbee.readAttribute(0xFF01,   0x0058, [mfgCode: 0x119C])
+    cmds += zigbee.readAttribute(0xFF01,   0x0002) 
+    cmds += zigbee.readAttribute(0xFF01,   0x0050) 
+    cmds += zigbee.readAttribute(0xFF01,   0x0051) 
+    cmds += zigbee.readAttribute(0xFF01,   0x0052) 
+    cmds += zigbee.readAttribute(0xFF01,   0x0053) 
+    cmds += zigbee.readAttribute(0xFF01,   0x0055) 
+    cmds += zigbee.readAttribute(0xFF01,   0x0056) 
+    cmds += zigbee.readAttribute(0xFF01,   0x0058) // [mfgCode: 0x119C]
     cmds += zigbee.readAttribute(0x0008,   0x0000)
     cmds += zigbee.readAttribute(0x0008,   0x0011)
     sendZigbeeCommands(cmds)
@@ -124,21 +107,12 @@ def off() {
 }
 
 def parse(String description) {
-    if (logEnable) log.debug "parse() ← ${description}"
+    if (logEnable) log.trace "parse() ← ${description}"
     def desc = zigbee.parseDescriptionAsMap(description) ?: [:]
     switch (desc.clusterInt) {
         case 0x0006:
             if (desc.attrInt == 0x0000) {
                 sendEvent(name: 'switch', value: desc.value == '01' ? 'on' : 'off')
-            }
-            break
-        case 0x0008:
-            if (desc.attrInt == 0x0000) {
-                def pct = Math.round(Integer.parseInt(desc.value, 16) / 254 * 100)
-                sendEvent(name: 'currentLevel', value: pct)
-            } else if (desc.attrInt == 0x0011) {
-                def pct = Math.round(Integer.parseInt(desc.value, 16) / 254 * 100)
-                sendEvent(name: 'onLevel', value: pct)
             }
             break
         case 0x0B04:
@@ -183,15 +157,6 @@ def parse(String description) {
                 case 0x0054:
                     dispatchTap(desc.value.toInteger())
                     break
-                case 0x0055:
-                    sendEvent(name: 'minIntensity', value: Integer.parseInt(desc.value,16))
-                    break
-                case 0x0056:
-                    sendEvent(name: 'phaseControl', value: desc.value == '01' ? 'reverse' : 'forward')
-                    break
-                case 0x0058:
-                    sendEvent(name: 'doubleUpFull', value: desc.value == '01' ? 'On' : 'Off')
-                    break
                 case 0x0090:
                     def wh = Integer.parseInt(desc.value,16)
                     def kwh = (wh/1000).setScale(3, BigDecimal.ROUND_HALF_UP)
@@ -219,17 +184,17 @@ def parse(String description) {
 }
 
 private void dispatchTap(int code) {
-    Integer btn; String evt
+    String btn; String evt
     switch (code) {
-        case 2:  btn=1; evt='pushed';       break
-        case 4:  btn=1; evt='doubleTapped'; break
-        case 3:  btn=1; evt='held';         break
-        case 18: btn=2; evt='pushed';       break
-        case 20: btn=2; evt='doubleTapped'; break
-        case 19: btn=2; evt='held';         break
+        case 2:  btn='up'; evt='pushed';       break
+        case 4:  btn='up'; evt='doubleTapped'; break
+        case 3:  btn='up'; evt='held';         break
+        case 12: btn='down'; evt='pushed';       break
+        case 14: btn='down'; evt='doubleTapped'; break
+        case 13: btn='down'; evt='held';         break
     }
     if (btn) {
-        if (logEnable) log.debug "Button ${evt} #${btn}"
+        if (logEnable) log.info "Button ${evt} ${btn}"
         sendEvent(name: evt, value: btn, isStateChange: true)
     }
 }
@@ -238,16 +203,13 @@ def lockKeypad()      { setKeypadLock('Locked') }
 def unlockKeypad()    { setKeypadLock('Unlocked') }
 def setKeypadLock(state) {
     def v = state.toLowerCase()=='locked'?1:0
-    writeFF01(0x0002, DataType.UINT8, v)
+    writeFF01(0x0002, DataType.ENUM8, v)
 }
 
 def setOnLedColor(hexStr)      { writeFF01(0x0050, DataType.UINT24, Integer.parseInt(hexStr,16)) }
 def setOffLedColor(hexStr)     { writeFF01(0x0051, DataType.UINT24, Integer.parseInt(hexStr,16)) }
 def setOnLedIntensity(pct)     { writeFF01(0x0052, DataType.UINT8, pct as Integer) }
 def setOffLedIntensity(pct)    { writeFF01(0x0053, DataType.UINT8, pct as Integer) }
-def setMinIntensity(lvl)       { writeFF01(0x0055, DataType.UINT16, lvl as Integer) }
-def setPhaseControl(mode)      { writeFF01(0x0056, DataType.UINT8, mode.toLowerCase()=='reverse'?1:0) }
-def setDoubleUpFull(state)     { writeFF01(0x0058, DataType.UINT8, state.toLowerCase()=='on'?1:0) }
 def setTimer(sec)              { writeFF01(0x00A0, DataType.UINT32, sec as Integer) }
 
 def refreshTimer() {
@@ -257,22 +219,11 @@ def refreshTimer() {
 }
 
 def setConnectedLoad(watts)    { writeFF01(0x0119, DataType.UINT16, watts as Integer) }
-def setOnLevel(pct)            {
-    def v = Math.round((pct/100)*254)
-    def cmds = []
-    cmds += zigbee.writeAttribute(0x0008, 0x0011, DataType.UINT8, v)
-    sendZigbeeCommands(cmds)
-}
-
-def refreshLevel() {
-    def cmds = []
-    cmds += zigbee.readAttribute(0x0008, 0x0000)
-    cmds += zigbee.readAttribute(0x0008, 0x0011)
-    sendZigbeeCommands(cmds)
-}
 
 private void writeFF01(attr, type, value) {
-    sendZigbeeCommands([ zigbee.writeAttribute(0xFF01, attr, type, value, [mfgCode: 0x119C]) ])
+    def cmds = []
+    cmds += zigbee.writeAttribute(0xFF01, attr, type, value, [mfgCode: 0x119C])
+    sendZigbeeCommands(cmds)
 }
 
 private void sendZigbeeCommands(List cmds) {
