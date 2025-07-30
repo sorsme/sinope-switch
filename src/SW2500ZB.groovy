@@ -1,3 +1,6 @@
+/*
+ * Thanks to Zigbee2MQTT authors and iamtrep/PJ for device technical details
+ */
 import hubitat.zigbee.zcl.DataType
 
 metadata {
@@ -8,8 +11,15 @@ metadata {
     ) {
         capability 'Switch'
         capability 'Configuration'
+        capability 'Initialize'
         capability 'Refresh'
         capability 'EnergyMeter'
+        capability 'TemperatureMeasurement'
+        capability 'DoubleTapableButton'
+        capability 'HoldableButton'
+        capability 'PushableButton'
+        capability 'ReleasableButton'
+        capability 'TemperatureMeasurement'
 
         // FF01 attributes
         attribute 'keypadLock',      'string'
@@ -27,6 +37,7 @@ metadata {
 
         // standard
         attribute 'numberOfButtons', 'number'
+        attribute 'temperature', 'number'
 
         command 'lockKeypad'
         command 'unlockKeypad'
@@ -61,18 +72,22 @@ def initialize() {
 def configure() {
     if (logEnable) log.debug 'Configuring reporting...'
     def cmds = []
+    cmds += zigbee.configureReporting(0x0002, 0x0000, DataType.INT16, 0, 3600)
     cmds += zigbee.configureReporting(0x0006, 0x0000, DataType.BOOLEAN, 0, 3600, 1)
     cmds += zigbee.configureReporting(0x0B04, 0x0505, DataType.UINT16, 30, 600, 10)
     cmds += zigbee.configureReporting(0x0B04, 0x050B, DataType.UINT24, 30, 600, (powerReportInterval ?: 50) as Integer)
     cmds += zigbee.configureReporting(0x0702, 0x0000, DataType.UINT48, 60, 3600, (energyReportInterval ?: 10) as Integer)
-    cmds += zigbee.configureReporting(0xFF01, 0x0054, DataType.ENUM8, 0, 0, 0)
+    cmds += zigbee.configureReporting(0xFF01, 0x0054, DataType.ENUM8, 0, 3600, 0)
     sendZigbeeCommands(cmds)
 }
 
 def refresh() {
     if (logEnable) log.debug 'Refreshing all attributes'
     def cmds = []
+    cmds += zigbee.readAttribute(0x0002,   0x0000)
     cmds += zigbee.readAttribute(0x0006,   0x0000)
+    cmds += zigbee.readAttribute(0x0008,   0x0000)
+    cmds += zigbee.readAttribute(0x0008,   0x0011)
     cmds += zigbee.readAttribute(0x0B04,   0x0505)
     cmds += zigbee.readAttribute(0x0B04,   0x050B)
     cmds += zigbee.readAttribute(0x0702,   0x0000)
@@ -87,8 +102,7 @@ def refresh() {
     cmds += zigbee.readAttribute(0xFF01,   0x00A0) 
     cmds += zigbee.readAttribute(0xFF01,   0x00A1) 
     cmds += zigbee.readAttribute(0xFF01,   0x0119) // [mfgCode: 0x119C]
-    cmds += zigbee.readAttribute(0x0008,   0x0000)
-    cmds += zigbee.readAttribute(0x0008,   0x0011)
+
     sendZigbeeCommands(cmds)
 }
 
@@ -110,6 +124,11 @@ def parse(String description) {
     if (logEnable) log.trace "parse() ← ${description}"
     def desc = zigbee.parseDescriptionAsMap(description) ?: [:]
     switch (desc.clusterInt) {
+        case 0x0002:
+            if (desc.attrInt == 0x0000) {
+                sendEvent(name: 'temperature', value: Integer.parseInt(desc.value, 16))
+            }
+            break        
         case 0x0006:
             if (desc.attrInt == 0x0000) {
                 sendEvent(name: 'switch', value: desc.value == '01' ? 'on' : 'off')
@@ -184,17 +203,17 @@ def parse(String description) {
 }
 
 private void dispatchTap(int code) {
-    String btn; String evt
+    Integer btn; String evt
     switch (code) {
-        case 2:  btn='up'; evt='pushed';       break
-        case 4:  btn='up'; evt='doubleTapped'; break
-        case 3:  btn='up'; evt='held';         break
-        case 12: btn='down'; evt='pushed';       break
-        case 14: btn='down'; evt='doubleTapped'; break
-        case 13: btn='down'; evt='held';         break
+        case 2:  btn=1; evt='pushed ON';       break
+        case 4:  btn=1; evt='doubleTapped ON'; break
+        case 3:  btn=1; evt='held ON';         break
+        case 12: btn=2; evt='pushed OFF';       break
+        case 14: btn=2; evt='doubleTapped OFF'; break
+        case 13: btn=2; evt='held OFF';         break
     }
     if (btn) {
-        if (logEnable) log.info "Button ${evt} ${btn}"
+        if (logEnable) log.info "Button ${btn} - ${evt}"
         sendEvent(name: evt, value: btn, isStateChange: true)
     }
 }
