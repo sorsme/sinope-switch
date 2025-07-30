@@ -83,7 +83,8 @@ def refresh() {
     cmds += zigbee.readAttribute(0xFF01,   0x0053) 
     cmds += zigbee.readAttribute(0xFF01,   0x0055) 
     cmds += zigbee.readAttribute(0xFF01,   0x0056) 
-    cmds += zigbee.readAttribute(0xFF01,   0x0058) // [mfgCode: 0x119C]
+    cmds += zigbee.readAttribute(0xFF01,   0x0058) 
+    cmds += zigbee.readAttribute(0xFF01,   0x0119) // [mfgCode: 0x119C]
     cmds += zigbee.readAttribute(0x0008,   0x0000)
     cmds += zigbee.readAttribute(0x0008,   0x0011)
     sendZigbeeCommands(cmds)
