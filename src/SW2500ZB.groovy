@@ -18,7 +18,6 @@ metadata {
         capability 'DoubleTapableButton'
         capability 'HoldableButton'
         capability 'PushableButton'
-        capability 'TemperatureMeasurement'
 
         // FF01 attributes
         attribute 'keypadLock',      'string'
