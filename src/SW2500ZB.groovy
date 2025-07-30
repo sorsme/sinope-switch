@@ -84,6 +84,8 @@ def refresh() {
     cmds += zigbee.readAttribute(0xFF01,   0x0055) 
     cmds += zigbee.readAttribute(0xFF01,   0x0056) 
     cmds += zigbee.readAttribute(0xFF01,   0x0058) 
+    cmds += zigbee.readAttribute(0xFF01,   0x00A0) 
+    cmds += zigbee.readAttribute(0xFF01,   0x00A1) 
     cmds += zigbee.readAttribute(0xFF01,   0x0119) // [mfgCode: 0x119C]
     cmds += zigbee.readAttribute(0x0008,   0x0000)
     cmds += zigbee.readAttribute(0x0008,   0x0011)
@@ -161,10 +163,10 @@ def parse(String description) {
                     sendEvent(name: 'energy', value: kwh, unit: 'kWh')
                     break
                 case 0x00A0:
-                    sendEvent(name: 'timer', value: Integer.parseInt(desc.value,16))
+                    sendEvent(name: 'timer', value: Integer.parseInt(desc.value,32))
                     break
                 case 0x00A1:
-                    sendEvent(name: 'timerCountDown', value: Integer.parseInt(desc.value,16))
+                    sendEvent(name: 'timerCountDown', value: Integer.parseInt(desc.value,32))
                     break
                 case 0x0119:
                     sendEvent(name: 'connectedLoad', value: Integer.parseInt(desc.value,16), unit: 'W')
@@ -212,7 +214,7 @@ def setTimer(sec)              { writeFF01(0x00A0, DataType.UINT32, sec as Integ
 
 def refreshTimer() {
     def cmds = []
-    cmds += zigbee.readAttribute(0xFF01, 0x00A1, [mfgCode: 0x119C])
+    cmds += zigbee.readAttribute(0xFF01, 0x00A1) //, [mfgCode: 0x119C])
     sendZigbeeCommands(cmds)
 }
 
