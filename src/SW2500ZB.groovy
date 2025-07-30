@@ -203,15 +203,15 @@ def parse(String description) {
 private void dispatchTap(int code) {
     Integer btn; String evt
     switch (code) {
-        case 2:  btn=1; evt='pushed ON';       break
-        case 4:  btn=1; evt='doubleTapped ON'; break
-        case 3:  btn=1; evt='held ON';         break
-        case 12: btn=2; evt='pushed OFF';       break
-        case 14: btn=2; evt='doubleTapped OFF'; break
-        case 13: btn=2; evt='held OFF';         break
+        case 2:  btn=1; evt='pushed';       break
+        case 4:  btn=1; evt='doubleTapped'; break
+        case 3:  btn=1; evt='held';         break
+        case 12: btn=2; evt='pushed';       break
+        case 14: btn=2; evt='doubleTapped'; break
+        case 13: btn=2; evt='held';         break
     }
     if (btn) {
-        if (logEnable) log.info "Button ${btn} - ${evt}"
+        if (logEnable) log.info "Button ${btn == 1 ? '1 (ON)' : '2 (OFF)'} - ${evt}"
         sendEvent(name: evt, value: btn, isStateChange: true)
     }
 }
