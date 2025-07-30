@@ -1,18 +1,17 @@
 {
-  "packageName": "Zigbee Driver for Sinope Switch",
+  "packageName": "Zigbee Driver for Sinope SW2500ZB",
   "author": "SORS",
   "minimumHEVersion": "2.4.2",
-  "dateReleased": "2025-07-28",
-  "releaseNotes": "2025-07-28 Initial release",
-  "communityLink": "https://community.hubitat.com/",
+  "dateReleased": "2025-07-29",
+  "releaseNotes": "2025-07-29 Initial release",
   "drivers": [
     {
       "id": "4481e8bf-fbdf-4aca-ad14-09f2de09c88f",
       "name": "Switch SW2500ZB",
-      "namespace": "sacua",
+      "namespace": "sorsme",
       "location": "https://raw.githubusercontent.com/sorsme/sinope-switch/main/src/SW2500ZB.groovy",
-      "required": false,
-      "version": "2025.728.1513"
+      "required": true,
+      "version": "2025.729.2309"
     }    
   ]
 }
