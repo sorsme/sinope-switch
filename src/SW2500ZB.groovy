@@ -6,12 +6,9 @@ metadata {
         namespace: 'sorsme',
         author: 'SORS'
     ) {
-        capability 'Actuator'
+        capability 'Switch'
         capability 'Configuration'
         capability 'Refresh'
-        capability 'Switch'
-        capability 'VoltageMeasurement'
-        capability 'PowerMeter'
         capability 'EnergyMeter'
 
         // FF01 attributes
